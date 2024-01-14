@@ -42,7 +42,7 @@ type DecryptFlags struct {
 }
 
 func ParseDecryptFlags() DecryptFlags {
-	df := DecryptFlags{}
+	df := DecryptFlags{verbose: true}
 	flag.StringVar(&df.archiveFile, "in", "", "archive file")
 	flag.StringVar(&df.resultDir, "dir", "", "result directory")
 	flag.Parse()
@@ -52,7 +52,7 @@ func ParseDecryptFlags() DecryptFlags {
 	if df.resultDir == "" {
 		panic("You have to specify result directory via -dir= option")
 	}
-	df.verbose = true
+
 	password := requestPassword(false)
 	df.keyFunc = func(s crypto.Salt, verbose bool) []byte { return crypto.GenerateArgonKey(password, s, verbose) }
 

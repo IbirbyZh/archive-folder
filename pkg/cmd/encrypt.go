@@ -65,7 +65,7 @@ type EncryptFlags struct {
 }
 
 func ParseEncryptFlags() EncryptFlags {
-	ef := EncryptFlags{}
+	ef := EncryptFlags{verbose: true}
 	flag.StringVar(&ef.sourceDir, "dir", "", "directory to archive")
 	flag.StringVar(&ef.archiveFile, "out", "", "result file")
 	flag.Parse()
@@ -75,15 +75,15 @@ func ParseEncryptFlags() EncryptFlags {
 	if ef.archiveFile == "" {
 		panic("You have to specify result file via -out= option")
 	}
-	ef.verbose = true
-
-	password := requestPassword(true)
 	salt, err := crypto.GenerateSalt()
 	if err != nil {
 		panic(err)
 	}
 	ef.salt = salt
+
+	password := requestPassword(true)
 	ef.keyFunc = func(s crypto.Salt, verbose bool) []byte { return crypto.GenerateArgonKey(password, s, verbose) }
+
 	return ef
 }
 
