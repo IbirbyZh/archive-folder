@@ -35,14 +35,14 @@ func requestPassword(doubleCheck bool) []byte {
 	return password
 }
 
-func writePipe(buf io.Writer, root string) error {
+func writePipe(buf io.Writer, ef EncryptFlags) error {
 	gz := gzip.NewWriter(buf)
 	defer gz.Close()
 
-	aw := tarball.NewArchiveWriter(gz, tarball.VerboseWriter(true))
+	aw := tarball.NewArchiveWriter(gz, tarball.VerboseWriter(ef.verbose))
 	defer aw.Close()
 
-	if err := aw.AddFiles(root); err != nil {
+	if err := aw.AddFiles(ef.sourceDir); err != nil {
 		return err
 	}
 
@@ -59,7 +59,9 @@ func writePipe(buf io.Writer, root string) error {
 type EncryptFlags struct {
 	archiveFile string
 	sourceDir   string
-	password    []byte
+	salt        crypto.Salt
+	keyFunc     func(crypto.Salt, bool) []byte
+	verbose     bool
 }
 
 func ParseEncryptFlags() EncryptFlags {
@@ -73,21 +75,27 @@ func ParseEncryptFlags() EncryptFlags {
 	if ef.archiveFile == "" {
 		panic("You have to specify result file via -out= option")
 	}
+	ef.verbose = true
 
-	ef.password = requestPassword(true)
-
+	password := requestPassword(true)
+	salt, err := crypto.GenerateSalt()
+	if err != nil {
+		panic(err)
+	}
+	ef.salt = salt
+	ef.keyFunc = func(s crypto.Salt, verbose bool) []byte { return crypto.GenerateArgonKey(password, s, verbose) }
 	return ef
 }
 
 func Encrypt(ef EncryptFlags) error {
-	encrypter, err := crypto.NewEncrypter(ef.password)
+	encrypter, err := crypto.NewEncrypter(ef.keyFunc(ef.salt, ef.verbose))
 	if err != nil {
 		return err
 	}
 
 	var buf bytes.Buffer
 
-	err = writePipe(&buf, ef.sourceDir)
+	err = writePipe(&buf, ef)
 	if err != nil {
 		return err
 	}
@@ -97,12 +105,15 @@ func Encrypt(ef EncryptFlags) error {
 		return err
 	}
 
-	file, err := os.OpenFile(ef.archiveFile, os.O_WRONLY, 0600)
+	file, err := os.OpenFile(ef.archiveFile, os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
+	if _, err := file.Write(ef.salt[:]); err != nil {
+		return err
+	}
 	if _, err := file.Write(encrypted); err != nil {
 		return err
 	}
@@ -117,7 +128,7 @@ func Encrypt(ef EncryptFlags) error {
 func testDecrypt(ef EncryptFlags) error {
 	return Decrypt(DecryptFlags{
 		archiveFile: ef.archiveFile,
-		password:    ef.password,
+		keyFunc:     ef.keyFunc,
 		resultDir:   "", // dry run
 	})
 }

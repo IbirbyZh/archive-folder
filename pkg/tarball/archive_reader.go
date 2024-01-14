@@ -105,6 +105,12 @@ func (ar *ArchiveReader) ExtractFiles(resultFolder string) error {
 		if _, err = file.Write(buf.Bytes()); err != nil {
 			return err
 		}
+		if err = file.Close(); err != nil {
+			return err
+		}
+		if ar.verbose {
+			fmt.Println(hdr.Name)
+		}
 	}
 
 	if archiveMD5Info == nil {
