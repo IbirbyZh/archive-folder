@@ -9,7 +9,7 @@ func TestFull(t *testing.T) {
 	var buf bytes.Buffer
 	aw := NewArchiveWriter(&buf)
 	defer aw.Close()
-	if err := aw.AddFiles("tarball_testdata"); err != nil {
+	if err := aw.AddFiles("../../testdata"); err != nil {
 		t.Fatal(err)
 	}
 	if err := aw.Close(); err != nil {
@@ -17,7 +17,7 @@ func TestFull(t *testing.T) {
 	}
 
 	ar := NewArchiveReader(&buf, VerboseReader(false), DryRun(true))
-	if err := ar.ExtractFiles("tarball_testdata_result"); err != nil {
+	if err := ar.ExtractFiles(""); err != nil {
 		t.Fatal(err)
 	}
 }

@@ -18,10 +18,8 @@ type Encrypter struct {
 	randomSource io.Reader
 }
 
-func GenerateSalt() (s Salt) {
-	if _, err := io.ReadFull(rand.Reader, s[:]); err != nil {
-		panic(err)
-	}
+func GenerateSalt() (s Salt, err error) {
+	_, err = io.ReadFull(rand.Reader, s[:])
 	return
 }
 

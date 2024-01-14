@@ -37,7 +37,7 @@ func readPipe(buf io.Reader, df DecryptFlags) error {
 type DecryptFlags struct {
 	archiveFile string
 	resultDir   string
-	password    []byte
+	keyFunc     func(crypto.Salt, bool) []byte
 	verbose     bool
 }
 
@@ -53,7 +53,8 @@ func ParseDecryptFlags() DecryptFlags {
 		panic("You have to specify result directory via -dir= option")
 	}
 	df.verbose = true
-	df.password = requestPassword(false)
+	password := requestPassword(false)
+	df.keyFunc = func(s crypto.Salt, verbose bool) []byte { return crypto.GenerateArgonKey(password, s, verbose) }
 
 	return df
 }
@@ -70,7 +71,7 @@ func Decrypt(df DecryptFlags) error {
 		return err
 	}
 
-	encrypter, err := crypto.NewEncrypter(crypto.GenerateArgonKey(df.password, salt, df.verbose))
+	encrypter, err := crypto.NewEncrypter(df.keyFunc(salt, df.verbose))
 	if err != nil {
 		return err
 	}
