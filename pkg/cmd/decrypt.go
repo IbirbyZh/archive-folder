@@ -11,7 +11,7 @@ import (
 	"github.com/IbirbyZh/sync-folder/pkg/tarball"
 )
 
-func readPipe(buf io.Reader, resultDir string) error {
+func readPipe(buf io.Reader, df DecryptFlags) error {
 	gz, err := gzip.NewReader(buf)
 	if err != nil {
 		return err
@@ -20,11 +20,11 @@ func readPipe(buf io.Reader, resultDir string) error {
 
 	ar := tarball.NewArchiveReader(
 		gz,
-		tarball.VerboseReader(true),
-		tarball.DryRun(resultDir == ""),
+		tarball.VerboseReader(df.verbose),
+		tarball.DryRun(df.resultDir == ""),
 	)
 
-	if err := ar.ExtractFiles(resultDir); err != nil {
+	if err := ar.ExtractFiles(df.resultDir); err != nil {
 		return err
 	}
 
@@ -38,6 +38,7 @@ type DecryptFlags struct {
 	archiveFile string
 	resultDir   string
 	password    []byte
+	verbose     bool
 }
 
 func ParseDecryptFlags() DecryptFlags {
@@ -51,23 +52,28 @@ func ParseDecryptFlags() DecryptFlags {
 	if df.resultDir == "" {
 		panic("You have to specify result directory via -dir= option")
 	}
-
+	df.verbose = true
 	df.password = requestPassword(false)
 
 	return df
 }
 
 func Decrypt(df DecryptFlags) error {
-	encrypter, err := crypto.NewEncrypter(df.password)
-	if err != nil {
-		return err
-	}
-
 	file, err := os.Open(df.archiveFile)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
+
+	var salt crypto.Salt
+	if _, err := io.ReadFull(file, salt[:]); err != nil {
+		return err
+	}
+
+	encrypter, err := crypto.NewEncrypter(crypto.GenerateArgonKey(df.password, salt, df.verbose))
+	if err != nil {
+		return err
+	}
 
 	var buf bytes.Buffer
 	if _, err := io.Copy(&buf, file); err != nil {
@@ -79,7 +85,7 @@ func Decrypt(df DecryptFlags) error {
 		return err
 	}
 
-	if err = readPipe(bytes.NewBuffer(decrypted), df.resultDir); err != nil {
+	if err = readPipe(bytes.NewBuffer(decrypted), df); err != nil {
 		return err
 	}
 

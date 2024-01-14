@@ -8,16 +8,16 @@ import (
 )
 
 const (
-	password       = "password"
+	key            = "this is key for cipher0123456789"
 	random         = "BPyAZgnkTsc3OqUv"
 	testMessage    = "some text"
-	testEncMessage = "\x42\x50\x79\x41\x5a\x67\x6e\x6b\x54\x73\x63\x33\x4f\x71\x55\x76\x0a\x29\x4e\x4b\x5c\x8c\x22\xee\x88"
+	testEncMessage = "\x42\x50\x79\x41\x5a\x67\x6e\x6b\x54\x73\x63\x33\x4f\x71\x55\x76\x23\xf8\x19\x6e\x24\x6b\x63\x63\xdf"
 )
 
 func TestEncryptMessage(t *testing.T) {
 	var buf bytes.Buffer
 	buf.WriteString(random)
-	e, err := NewEncrypter([]byte(password), WithRandomSource(&buf))
+	e, err := NewEncrypter([]byte(key), WithRandomSource(&buf))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +32,7 @@ func TestEncryptMessage(t *testing.T) {
 }
 
 func TestDecryptMessage(t *testing.T) {
-	e, err := NewEncrypter([]byte(password))
+	e, err := NewEncrypter([]byte(key))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func getRandomBytes(length int64) []byte {
 func TestFull(t *testing.T) {
 	message := getRandomBytes(10000)
 
-	e, err := NewEncrypter(getRandomBytes(10))
+	e, err := NewEncrypter(getRandomBytes(32))
 	if err != nil {
 		t.Fatal(err)
 	}

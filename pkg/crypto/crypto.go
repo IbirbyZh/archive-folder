@@ -4,27 +4,46 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"crypto/sha256"
+	"fmt"
 	"io"
+	"time"
 
-	"golang.org/x/crypto/pbkdf2"
+	"golang.org/x/crypto/argon2"
 )
+
+type Salt [256]byte
 
 type Encrypter struct {
 	block        cipher.Block
 	randomSource io.Reader
 }
 
-func NewEncrypter(password []byte, options ...func(*Encrypter)) (*Encrypter, error) {
-	dk := pbkdf2.Key(
-		password,
-		[]byte("RK0EO4mjYEg2GU0r0mBAZ6JCTtiStiQbOvzq4Ro1f5D0G1KHnilJpMdWsC4MoAzVqMJ"),
-		4096,
-		32,
-		sha256.New,
-	)
+func GenerateSalt() (s Salt) {
+	if _, err := io.ReadFull(rand.Reader, s[:]); err != nil {
+		panic(err)
+	}
+	return
+}
 
-	block, err := aes.NewCipher(dk)
+func GenerateArgonKey(password []byte, salt Salt, verbose bool) []byte {
+	now := time.Now()
+	defer func() {
+		if verbose {
+			fmt.Printf("Argon2 key time: %v\n", time.Since(now))
+		}
+	}()
+	return argon2.IDKey(
+		password,
+		salt[:],
+		15,
+		1024*1024,
+		16,
+		32,
+	)
+}
+
+func NewEncrypter(key []byte, options ...func(*Encrypter)) (*Encrypter, error) {
+	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}

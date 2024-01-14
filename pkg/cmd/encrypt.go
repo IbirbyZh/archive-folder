@@ -80,7 +80,8 @@ func ParseEncryptFlags() EncryptFlags {
 }
 
 func Encrypt(ef EncryptFlags) error {
-	encrypter, err := crypto.NewEncrypter(ef.password)
+	salt := crypto.GenerateSalt()
+	encrypter, err := crypto.NewEncrypter(crypto.GenerateArgonKey(ef.password, salt, true))
 	if err != nil {
 		return err
 	}
@@ -103,6 +104,9 @@ func Encrypt(ef EncryptFlags) error {
 	}
 	defer file.Close()
 
+	if _, err := file.Write(salt[:]); err != nil {
+		return err
+	}
 	if _, err := file.Write(encrypted); err != nil {
 		return err
 	}
@@ -110,7 +114,7 @@ func Encrypt(ef EncryptFlags) error {
 	if err := file.Close(); err != nil {
 		return err
 	}
-
+	
 	return testDecrypt(ef)
 }
 
