@@ -45,6 +45,7 @@ func ParseDecryptFlags() DecryptFlags {
 	df := DecryptFlags{verbose: true}
 	flag.StringVar(&df.archiveFile, "in", "", "archive file")
 	flag.StringVar(&df.resultDir, "dir", "", "result directory")
+	a2sFile := flag.String("a2s", "", "file with argon2 settings")
 	flag.Parse()
 	if df.archiveFile == "" {
 		panic("You have to specify archive via -in= option")
@@ -53,8 +54,12 @@ func ParseDecryptFlags() DecryptFlags {
 		panic("You have to specify result directory via -dir= option")
 	}
 
+	a2s := loadArgon2Settings(*a2sFile)
+
 	password := requestPassword(false)
-	df.keyFunc = func(s crypto.Salt, verbose bool) []byte { return crypto.GenerateArgonKey(password, s, verbose) }
+	df.keyFunc = func(s crypto.Salt, verbose bool) []byte {
+		return crypto.GenerateArgonKey(password, s, a2s, verbose)
+	}
 
 	return df
 }
