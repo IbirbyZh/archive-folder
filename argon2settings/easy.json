@@ -1,0 +1,5 @@
+{
+    "memory": 32768,
+    "iterations": 2,
+    "parallelism": 2
+}

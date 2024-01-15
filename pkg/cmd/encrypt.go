@@ -56,6 +56,18 @@ func writePipe(buf io.Writer, ef EncryptFlags) error {
 	return nil
 }
 
+func loadArgon2Settings(filePath string) crypto.Argon2Settings {
+	if filePath == "" {
+		return crypto.DefaultArgon2Settings()
+	} else {
+		a2s, err := crypto.LoadArgon2Settings(filePath)
+		if err != nil {
+			panic(err)
+		}
+		return a2s
+	}
+}
+
 type EncryptFlags struct {
 	archiveFile string
 	sourceDir   string
@@ -68,6 +80,7 @@ func ParseEncryptFlags() EncryptFlags {
 	ef := EncryptFlags{verbose: true}
 	flag.StringVar(&ef.sourceDir, "dir", "", "directory to archive")
 	flag.StringVar(&ef.archiveFile, "out", "", "result file")
+	a2sFile := flag.String("a2s", "", "file with argon2 settings")
 	flag.Parse()
 	if ef.sourceDir == "" {
 		panic("You have to specify directory to archive via -dir= option")
@@ -75,14 +88,19 @@ func ParseEncryptFlags() EncryptFlags {
 	if ef.archiveFile == "" {
 		panic("You have to specify result file via -out= option")
 	}
+
 	salt, err := crypto.GenerateSalt()
 	if err != nil {
 		panic(err)
 	}
 	ef.salt = salt
 
+	a2s := loadArgon2Settings(*a2sFile)
+
 	password := requestPassword(true)
-	ef.keyFunc = func(s crypto.Salt, verbose bool) []byte { return crypto.GenerateArgonKey(password, s, verbose) }
+	ef.keyFunc = func(s crypto.Salt, verbose bool) []byte {
+		return crypto.GenerateArgonKey(password, s, a2s, verbose)
+	}
 
 	return ef
 }

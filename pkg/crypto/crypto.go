@@ -4,40 +4,12 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"fmt"
 	"io"
-	"time"
-
-	"golang.org/x/crypto/argon2"
 )
-
-type Salt [256]byte
 
 type Encrypter struct {
 	block        cipher.Block
 	randomSource io.Reader
-}
-
-func GenerateSalt() (s Salt, err error) {
-	_, err = io.ReadFull(rand.Reader, s[:])
-	return
-}
-
-func GenerateArgonKey(password []byte, salt Salt, verbose bool) []byte {
-	now := time.Now()
-	defer func() {
-		if verbose {
-			fmt.Printf("Argon2 key time: %v\n", time.Since(now))
-		}
-	}()
-	return argon2.IDKey(
-		password,
-		salt[:],
-		15,
-		1024*1024,
-		16,
-		32,
-	)
 }
 
 func NewEncrypter(key []byte, options ...func(*Encrypter)) (*Encrypter, error) {
