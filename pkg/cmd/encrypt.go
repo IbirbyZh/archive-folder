@@ -42,8 +42,10 @@ func writePipe(buf io.Writer, ef EncryptFlags) error {
 	aw := tarball.NewArchiveWriter(gz, tarball.VerboseWriter(ef.verbose))
 	defer aw.Close()
 
-	if err := aw.AddFiles(ef.sourceDir); err != nil {
-		return err
+	for _, d := range ef.sourceDirs {
+		if err := aw.AddFiles(d); err != nil {
+			return err
+		}
 	}
 
 	if err := aw.Close(); err != nil {
@@ -68,9 +70,20 @@ func loadArgon2Settings(filePath string) crypto.Argon2Settings {
 	}
 }
 
+type arrayFlags []string
+
+func (i *arrayFlags) String() string {
+	return "directories to archive"
+}
+
+func (i *arrayFlags) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
 type EncryptFlags struct {
 	archiveFile string
-	sourceDir   string
+	sourceDirs  arrayFlags
 	salt        crypto.Salt
 	keyFunc     func(crypto.Salt, bool) []byte
 	verbose     bool
@@ -78,12 +91,12 @@ type EncryptFlags struct {
 
 func ParseEncryptFlags() EncryptFlags {
 	ef := EncryptFlags{verbose: true}
-	flag.StringVar(&ef.sourceDir, "dir", "", "directory to archive")
+	flag.Var(&ef.sourceDirs, "dir", "directory to archive")
 	flag.StringVar(&ef.archiveFile, "out", "", "result file")
 	a2sFile := flag.String("a2s", "", "file with argon2 settings")
 	flag.Parse()
-	if ef.sourceDir == "" {
-		panic("You have to specify directory to archive via -dir= option")
+	if len(ef.sourceDirs) == 0 {
+		panic("You have to specify at least one directory to archive via -dir= option")
 	}
 	if ef.archiveFile == "" {
 		panic("You have to specify result file via -out= option")

@@ -18,7 +18,7 @@ func TestEncrypt(t *testing.T) {
 
 	if err := Encrypt(EncryptFlags{
 		archiveFile: filepath.Join(dir, "archive"),
-		sourceDir:   "../../testdata",
+		sourceDirs:  arrayFlags{"../../testdata"},
 		keyFunc: func(s crypto.Salt, _ bool) []byte {
 			return key[:]
 		},
